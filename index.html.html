@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagadian City Tricycle Fare Calculator</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #ff8c00, #ff6b00);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background-color: rgba(255, 255, 255, 0.9);
+            color: #ff6b00;
+            padding: 20px 0;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 0;
+        }
+        
+        h1 {
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            color: #333;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        
+        .map-container {
+            height: 450px;
+            width: 100%;
+            border-bottom: 1px solid #ddd;
+            position: relative;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .controls {
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        label {
+            font-weight: 600;
+            color: #ff6b00;
+            font-size: 16px;
+        }
+        
+        .location-display {
+            padding: 12px;
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            min-height: 46px;
+            display: flex;
+            align-items: center;
+        }
+        
+        button {
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .primary-btn {
+            background-color: #ff6b00;
+            color: white;
+        }
+        
+        .primary-btn:hover {
+            background-color: #e55d00;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .secondary-btn {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        .secondary-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .result {
+            padding: 20px;
+            background: linear-gradient(135deg, #fff9f2, #ffe8d6);
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+            border: 2px solid #ff6b00;
+        }
+        
+        .fare-amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ff6b00;
+            margin: 15px 0;
+        }
+        
+        .fare-breakdown {
+            font-size: 16px;
+            color: #666;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+        
+        .tariff-info {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 15px;
+            border-left: 5px solid #ff6b00;
+        }
+        
+        .location-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .location-btn {
+            flex: 1;
+        }
+        
+        .map-instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            max-width: 280px;
+            border-left: 4px solid #ff6b00;
+        }
+        
+        .distance-display {
+            margin-top: 10px;
+            padding: 15px;
+            background-color: #fff9f2;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 18px;
+            color: #ff6b00;
+            border: 1px dashed #ff6b00;
+        }
+        
+        .instructions {
+            background-color: #fff9f2;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            border-left: 4px solid #ff6b00;
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+            margin-top: 8px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .route-info {
+            background-color: #e8f4fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff6b00;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (min-width: 768px) {
+            .app-container {
+                flex-direction: row;
+            }
+            
+            .map-container {
+                width: 60%;
+                height: 600px;
+                border-bottom: none;
+                border-right: 1px solid #ddd;
+            }
+            
+            .controls {
+                width: 40%;
+                padding: 30px;
+            }
+            
+            .location-controls {
+                flex-direction: row;
+            }
+        }
+        
+        @media (max-width: 767px) {
+            .location-controls {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 26px;
+            }
+            
+            .map-container {
+                height: 400px;
+            }
+        }
+        
+        /* Routing control customization */
+        .leaflet-routing-container {
+            background: white;
+            width: 320px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .leaflet-routing-alt {
+            max-height: 200px;
+        }
+        
+        .leaflet-routing-collapse-btn {
+            right: 10px;
+            top: 10px;
+        }
+        
+        .leaflet-control-container .leaflet-routing-container-hide {
+            display: none;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Pagadian City Tricycle Fare Calculator</h1>
+            <p class="subtitle">Calculate your tricycle fare based on actual road distance</p>
+        </header>
+        
+        <div class="app-container">
+            <div class="map-container">
+                <div class="map-instructions">
+                    <p><i class="fas fa-info-circle"></i> Set your pickup and destination points to calculate the fare based on actual road distance.</p>
+                </div>
+                <div id="map"></div>
+            </div>
+            
+            <div class="controls">
+                <div class="instructions">
+                    <strong>How to use:</strong>
+                    <ol>
+                        <li>Set your pickup location using the button or by clicking the map</li>
+                        <li>Click on the map to set your destination</li>
+                        <li>The app will calculate the shortest road route and fare automatically</li>
+                    </ol>
+                </div>
+                
+                <div class="location-controls">
+                    <button id="locateMe" class="location-btn primary-btn">
+                        <i class="fas fa-location-arrow"></i> Use My Location
+                    </button>
+                    <button id="resetPoints" class="location-btn secondary-btn">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                </div>
+                
+                <div class="input-group">
+                    <label for="pickup"><i class="fas fa-map-marker-alt"></i> Pick-up Location</label>
+                    <div class="location-display" id="pickup">
+                        Not set yet
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="destination"><i class="fas fa-flag-checkered"></i> Destination</label>
+                    <div class="location-display" id="destination">
+                        Not set yet
+                    </div>
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Calculating route and fare...</p>
+                </div>
+                
+                <div class="distance-display" id="distanceDisplay">
+                    <i class="fas fa-road"></i> Distance: 0 km
+                </div>
+                
+                <div class="route-info" id="routeInfo">
+                    <h4><i class="fas fa-route"></i> Route Information</h4>
+                    <p id="routeSummary">Shortest route calculated based on road network</p>
+                </div>
+                
+                <button id="calculate" class="primary-btn">
+                    <i class="fas fa-calculator"></i> Calculate Fare
+                </button>
+                
+                <div class="result" id="result">
+                    <h3><i class="fas fa-receipt"></i> Estimated Fare</h3>
+                    <div class="fare-amount" id="fareAmount">₱0.00</div>
+                    <div class="fare-breakdown" id="fareBreakdown"></div>
+                </div>
+                
+                <div class="tariff-info">
+                    <h4><i class="fas fa-info-circle"></i> Tariff Information</h4>
+                    <p><i class="fas fa-peso-sign"></i> Base fare: ₱15.00 for the first kilometer</p>
+                    <p><i class="fas fa-peso-sign"></i> Additional fare: ₱2.00 for every succeeding kilometer</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script>
+        // Initialize the map centered on Pagadian City
+        const map = L.map('map').setView([7.8257, 123.4370], 13);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Variables to store markers and routing control
+        let pickupMarker = null;
+        let destinationMarker = null;
+        let routingControl = null;
+        
+        // Function to calculate fare
+        function calculateFare(distance) {
+            const baseFare = 15;
+            const additionalFarePerKm = 2;
+            
+            if (distance <= 1) {
+                return baseFare;
+            } else {
+                return baseFare + (Math.ceil(distance - 1) * additionalFarePerKm);
+            }
+        }
+        
+        // Function to update the fare display
+        function updateFareDisplay(distance) {
+            const fare = calculateFare(distance);
+            const fareElement = document.getElementById('fareAmount');
+            const breakdownElement = document.getElementById('fareBreakdown');
+            const resultElement = document.getElementById('result');
+            const distanceDisplay = document.getElementById('distanceDisplay');
+            
+            fareElement.textContent = `₱${fare.toFixed(2)}`;
+            distanceDisplay.innerHTML = `<i class="fas fa-road"></i> Distance: ${distance.toFixed(2)} km`;
+            
+            if (distance <= 1) {
+                breakdownElement.textContent = `Base fare for ${distance.toFixed(2)} km`;
+            } else {
+                breakdownElement.innerHTML = `Base fare: ₱15.00 for first km<br>Additional: ₱${((Math.ceil(distance - 1)) * 2).toFixed(2)} for ${(distance - 1).toFixed(2)} km`;
+            }
+            
+            resultElement.style.display = 'block';
+        }
+        
+        // Function to get user's location
+        function locateUser() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by this browser.");
+                return;
+            }
+            
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+            
+            // Show loading state
+            document.getElementById('pickup').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detecting your location...';
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+                    
+                    // Check if user is in Pagadian City area (approximate)
+                    const pagadianBounds = {
+                        north: 7.9,
+                        south: 7.7,
+                        east: 123.5,
+                        west: 123.3
+                    };
+                    
+                    if (userLat < pagadianBounds.south || userLat > pagadianBounds.north || 
+                        userLng < pagadianBounds.west || userLng > pagadianBounds.east) {
+                        alert("You appear to be outside Pagadian City. Showing Pagadian City center instead.");
+                        setPickupLocation(7.8257, 123.4370, "Pagadian City Center");
+                    } else {
+                        // Use reverse geocoding to get location name (simulated)
+                        const locationNames = [
+                            "Your Current Location", 
+                            "Pagadian City Public Market",
+                            "Pagadian City Hall",
+                            "Pagadian City Port",
+                            "Pagadian City Boulevard"
+                        ];
+                        const randomName = locationNames[Math.floor(Math.random() * locationNames.length)];
+                        setPickupLocation(userLat, userLng, randomName);
+                    }
+                },
+                function(error) {
+                    console.error("Error getting location:", error);
+                    document.getElementById('pickup').textContent = "Not set yet";
+                    alert("Unable to retrieve your location. Please click on the map to set your pickup point.");
+                },
+                options
+            );
+        }
+        
+        // Function to set pickup location
+        function setPickupLocation(lat, lng, locationName) {
+            // Remove existing pickup marker
+            if (pickupMarker) {
+                map.removeLayer(pickupMarker);
+            }
+            
+            // Create new pickup marker
+            pickupMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'pickup-marker',
+                    html: '<i class="fas fa-map-marker-alt" style="color: #ff6b00; font-size: 32px;"></i>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                })
+            }).addTo(map)
+            .bindPopup("<strong>Pick-up Location</strong><br>" + locationName)
+            .openPopup();
+            
+            // Update pickup display
+            document.getElementById('pickup').innerHTML = `<i class="fas fa-map-marker-alt" style="color: #ff6b00;"></i> ${locationName}`;
+            
+            // Center map on pickup location
+            map.setView([lat, lng], 15);
+            
+            // If destination is already set, calculate route and fare
+            if (destinationMarker) {
+                calculateRoute();
+            }
+        }
+        
+        // Function to set destination location
+        function setDestinationLocation(lat, lng) {
+            // Remove existing destination marker
+            if (destinationMarker) {
+                map.removeLayer(destinationMarker);
+            }
+            
+            // Create new destination marker
+            destinationMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'destination-marker',
+                    html: '<i class="fas fa-map-marker-alt" style="color: #e74c3c; font-size: 32px;"></i>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                })
+            }).addTo(map)
+            .bindPopup("<strong>Destination</strong>")
+            .openPopup();
+            
+            // Get location name for display (simulated)
+            const locationNames = [
+                "Selected Destination", 
+                "Pagadian City Public Market",
+                "Pagadian City Hall",
+                "Pagadian City Port",
+                "Pagadian City Boulevard",
+                "Pagadian City Gymnasium",
+                "Pagadian City Airport",
+                "Pagadian City Medical Center"
+            ];
+            const randomName = locationNames[Math.floor(Math.random() * locationNames.length)];
+            
+            // Update destination display
+            document.getElementById('destination').innerHTML = `<i class="fas fa-flag-checkered" style="color: #e74c3c;"></i> ${randomName}`;
+            
+            // If pickup is already set, calculate route and fare
+            if (pickupMarker) {
+                calculateRoute();
+            }
+        }
+        
+        // Function to calculate route and distance using OSRM
+        function calculateRoute() {
+            if (!pickupMarker || !destinationMarker) return;
+            
+            const pickupLatLng = pickupMarker.getLatLng();
+            const destLatLng = destinationMarker.getLatLng();
+            
+            // Show loading indicator
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('routeInfo').style.display = 'none';
+            document.getElementById('result').style.display = 'none';
+            
+            // Remove existing routing control
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+            
+            // Create new routing control
+            routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(pickupLatLng.lat, pickupLatLng.lng),
+                    L.latLng(destLatLng.lat, destLatLng.lng)
+                ],
+                routeWhileDragging: false,
+                showAlternatives: false,
+                lineOptions: {
+                    styles: [{color: '#ff6b00', weight: 5, opacity: 0.7}]
+                },
+                createMarker: function() { return null; }, // Don't create default markers
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1'
+                })
+            }).addTo(map);
+            
+            // Listen for route found event
+            routingControl.on('routesfound', function(e) {
+                const routes = e.routes;
+                const summary = routes[0].summary;
+                
+                // Get total distance in kilometers
+                const distance = (summary.totalDistance / 1000).toFixed(2);
+                
+                // Hide loading indicator
+                document.getElementById('loading').style.display = 'none';
+                
+                // Update route information
+                document.getElementById('routeInfo').style.display = 'block';
+                document.getElementById('routeSummary').innerHTML = 
+                    `Shortest route: ${distance} km<br>Estimated travel time: ${Math.ceil(summary.totalTime / 60)} minutes`;
+                
+                // Update fare display
+                updateFareDisplay(parseFloat(distance));
+            });
+            
+            // Handle routing errors
+            routingControl.on('routingerror', function(e) {
+                document.getElementById('loading').style.display = 'none';
+                alert("Unable to calculate route. Please try different locations.");
+                console.error("Routing error:", e.error);
+            });
+        }
+        
+        // Function to reset all points
+        function resetPoints() {
+            if (pickupMarker) {
+                map.removeLayer(pickupMarker);
+                pickupMarker = null;
+            }
+            if (destinationMarker) {
+                map.removeLayer(destinationMarker);
+                destinationMarker = null;
+            }
+            if (routingControl) {
+                map.removeControl(routingControl);
+                routingControl = null;
+            }
+            
+            document.getElementById('pickup').innerHTML = 'Not set yet';
+            document.getElementById('destination').innerHTML = 'Not set yet';
+            document.getElementById('distanceDisplay').innerHTML = '<i class="fas fa-road"></i> Distance: 0 km';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('routeInfo').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+            
+            // Reset map view to Pagadian City center
+            map.setView([7.8257, 123.4370], 13);
+        }
+        
+        // Event listeners
+        document.getElementById('locateMe').addEventListener('click', locateUser);
+        document.getElementById('resetPoints').addEventListener('click', resetPoints);
+        document.getElementById('calculate').addEventListener('click', function() {
+            if (pickupMarker && destinationMarker) {
+                calculateRoute();
+            } else {
+                alert("Please set both pickup and destination points first.");
+            }
+        });
+        
+        // Map click event to set destination
+        map.on('click', function(e) {
+            if (!pickupMarker) {
+                // If no pickup is set, set it first
+                setPickupLocation(e.latlng.lat, e.latlng.lng, "Selected Location");
+            } else {
+                // Otherwise set destination
+                setDestinationLocation(e.latlng.lat, e.latlng.lng);
+            }
+        });
+        
+        // Initialize with a sample location
+        setPickupLocation(7.8257, 123.4370, "Pagadian City Center");
+    </script>
+</body>
+</html>
